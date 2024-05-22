@@ -1,0 +1,32 @@
+-- Create the database if it doesn't exist
+CREATE DATABASE IF NOT EXISTS SCHEMACHANGE_DEMO;
+
+-- Set the database and schema context
+USE SCHEMA SCHEMACHANGE_DEMO.PUBLIC;
+
+-- Create the file formats
+CREATE OR REPLACE FILE FORMAT CSV_FILE_FORMAT
+    TYPE='CSV'
+    COMPRESSION = 'AUTO'
+    FIELD_DELIMITER = ','
+    SKIP_HEADER = 1
+    NULL_IF = ('NULL','\\N','\N', '');
+
+
+
+
+GRANT OWNERSHIP ON INTEGRATION IMPORT_POSTI TO ROLE SYSADMIN;
+-- Create the stages
+CREATE OR REPLACE STAGE POSTI
+    URL = 's3://import-posti/';
+
+-- Create the tables
+CREATE OR REPLACE TABLE POST_CODE_FILE
+    ENABLE_SCHEMA_EVOLUTION = TRUE
+    USING TEMPLATE(
+    SELECT ARRAY_AGG(OBJECT_CONSTRUCT(*))FROM TABLE(
+        INFER_SCHEMA(
+        LOCATION=> '@POSTI/post_code_file/',
+        FILE_FORMAT=> 'CSV_FILE_FORMAT',
+        IGNORE_CASE => TRUE
+        )));
